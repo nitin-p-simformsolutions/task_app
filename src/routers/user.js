@@ -1,6 +1,7 @@
 const express = require('express');
 const User = require('../models/user');
 const auth = require('../middleware/auth');
+const multer = require('multer');
 const router =express.Router();
 router.use(express.json());
 
@@ -58,26 +59,7 @@ router.get("/users/me", auth ,async (req, res) => {
 
 });
 
-router.get("/users/:id",async (req, res) => {
-  try {
-    const _id = req.params.id;
-    const user = await User.findById(_id);
-    if(!user){
-      return res.status(404).send()
-    }
-    res.send(user)
-  } catch (error) {
-    res.status(500).send(err)
-  }
-  // User.findById(_id).then((user)=>{
-  //     if(!user){
-  //         return res.status(404).send();
-  //     }
-  //     res.send(user);
-  // }).catch(err => res.status(500).send(err))
-});
-
-router.patch('/users/:id',async (req, res)=>{
+router.patch('/users/me', auth,async (req, res)=>{
   const updates = Object.keys(req.body);
   const allowedUpdates = ['name', 'email', 'password','age']
 
@@ -90,33 +72,54 @@ router.patch('/users/:id',async (req, res)=>{
   }
 
   try {
-    const _id = req.params.id;
-    const user = await User.findById(_id);
+    const _id = req.user._id;
+    //const user = await User.findById(_id);
+    const user = req.user;
     updates.forEach(update => {
       user[update] = req.body[update]
     })
     await user.save();
-    //const upUser =await User.findByIdAndUpdate(_id,req.body, {new:true, runValidators:true});
-    if(!user){
-      return res.status(404).send()
-    }
+    
     res.send(user);
   } catch (error) {
     res.status(400).send(error);
   }
 })
 
-router.delete('/users/:id', async (req, res)=>{
-  const _id = req.params.id;
+router.delete('/users/me',auth, async (req, res)=>{
+  const _id = req.user._id;
   try {
-    const deletedUser = await User.findByIdAndDelete(_id)
-    if(!deletedUser){
-      res.status(404).send();
-    }
-    res.send(deletedUser);
+    await req.user.remove()
+    res.send(req.user);
   } catch (error) {
     res.status(500).send();
   }
+})
+
+const upload = multer({
+  limits:{
+    fileSize: 1000000
+  },
+  fileFilter(req, file, cb){
+    if(!file.originalname.match(/\.(jpg|jpeg|png)$/)){
+      cb(new Error('Please upload appropriate type'))
+    }
+    cb(undefined, true)
+  }
+})
+
+router.post('/users/me/avatar', auth, upload.single('avatar'),async (req, res)=>{
+  req.user.avatar = req.file.buffer
+  await req.user.save()
+  res.send()
+},(error, req, res, next)=>{
+  res.status(400).send({error:error.message})
+})
+
+router.delete('/users/me/avatar', auth, async (req, res)=>{
+  req.user.avatar = undefined;
+  await req.user.save();
+  res.send();
 })
 
 module.exports = router;
