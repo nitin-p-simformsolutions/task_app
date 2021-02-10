@@ -6,10 +6,8 @@ const userRouter = require('./routers/user');
 app.use(userRouter)
 
 const taskRouter = require('./routers/tasks');
-app.use(taskRouter)
-
+app.use(taskRouter);
 
 app.use(express.json());
-
 
 module.exports = app;

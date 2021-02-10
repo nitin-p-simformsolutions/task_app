@@ -4,7 +4,6 @@ const Task = require('../models/task');
 const auth = require('../middleware/auth');
 router.use(express.json());
 
-
 //Task request
 router.post("/tasks",auth,async (req, res) => {
     //const task = new Task(req.body);
